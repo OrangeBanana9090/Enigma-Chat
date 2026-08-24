@@ -1,12 +1,11 @@
-```html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>ENIGMA CHAT</title>
 
-<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -40,7 +39,8 @@
         width: 100%;
     }
 
-    td, th {
+    td,
+    th {
         border: 1px solid #555;
         padding: 6px;
         text-align: center;
@@ -55,6 +55,7 @@
         border: 1px solid #555;
         padding: 10px;
         font-family: monospace;
+        border-radius: 4px;
     }
 
     textarea {
@@ -68,6 +69,7 @@
         padding: 10px 15px;
         margin: 5px;
         cursor: pointer;
+        border-radius: 4px;
     }
 
     button:hover {
@@ -88,6 +90,7 @@
         background: #222;
         border-radius: 5px;
         user-select: none;
+        cursor: pointer;
     }
 
     .key.active {
@@ -103,13 +106,13 @@
 
     #chat {
         margin-top: 10px;
-        max-height: 400px;
+        max-height: 450px;
         overflow-y: auto;
     }
 
     .message {
         border: 1px solid #444;
-        padding: 8px;
+        padding: 10px;
         margin: 6px 0;
         border-radius: 5px;
         background: #101010;
@@ -121,8 +124,15 @@
     }
 
     .message .encrypted {
-        color: #ccc;
+        color: #ddd;
         word-break: break-all;
+        margin-top: 5px;
+    }
+
+    .message .time {
+        color: #777;
+        font-size: 12px;
+        margin-top: 5px;
     }
 
     .status {
@@ -137,6 +147,27 @@
     .offline {
         color: #ff7777;
     }
+
+    .room-code {
+        font-size: 24px;
+        color: #7cff7c;
+        letter-spacing: 4px;
+        text-align: center;
+        padding: 15px;
+        border: 1px solid #555;
+        background: #080808;
+        margin: 10px 0;
+        border-radius: 5px;
+    }
+
+    .hint {
+        color: #888;
+        font-size: 13px;
+    }
+
+    .hidden {
+        display: none;
+    }
 </style>
 </head>
 
@@ -144,67 +175,152 @@
 
 <div class="app">
 
-<h1>🔐 ENIGMA CHAT</h1>
+    <h1>🔐 ENIGMA CHAT</h1>
 
-<div class="panel">
-    <h2>Today's Key</h2>
-    <div id="keyTable"></div>
-</div>
+    <!-- =========================
+         ROOM MENU
+    ========================== -->
 
-<div class="panel">
-    <h2>Input</h2>
+    <div class="panel">
 
-    <textarea
-        id="input"
-        rows="4"
-        placeholder="TYPE ENGLISH HERE..."
-    ></textarea>
+        <h2>🌐 ROOM</h2>
 
-    <div class="keyboard" id="keyboard"></div>
+        <div id="roomStatus">
+            Loading...
+        </div>
 
-    <button onclick="encrypt()">ENCRYPT</button>
-    <button onclick="decrypt()">DECRYPT</button>
-</div>
+        <button onclick="createRoom()">
+            CREATE ROOM
+        </button>
 
-<div class="panel">
-    <h2>Output</h2>
-    <div id="output"></div>
-</div>
+        <button onclick="showJoinBox()">
+            JOIN ROOM
+        </button>
 
-<div class="panel">
-    <button onclick="copyOutput()">COPY</button>
-</div>
+        <button onclick="goLobby()">
+            LOBBY
+        </button>
 
-<div class="panel">
+        <div id="joinBox" class="hidden">
 
-    <h2>📡 CHAT</h2>
+            <input
+                id="roomInput"
+                type="text"
+                maxlength="20"
+                placeholder="ROOM CODE"
+            >
 
-    <input
-        id="sender"
-        type="text"
-        placeholder="NAME"
-    >
+            <button onclick="joinRoom()">
+                JOIN
+            </button>
 
-    <button onclick="sendMessage()">
-        SEND ENCRYPTED MESSAGE
-    </button>
+        </div>
 
-    <div id="connectionStatus" class="status">
-        Connecting...
+        <div class="hint">
+            ルームに入らなければ全員共通のロビーです。
+        </div>
+
     </div>
 
-    <div id="chat"></div>
 
-</div>
+    <!-- =========================
+         TODAY'S KEY
+    ========================== -->
+
+    <div class="panel">
+
+        <h2>🔑 Today's Key</h2>
+
+        <div id="keyTable"></div>
+
+    </div>
+
+
+    <!-- =========================
+         INPUT
+    ========================== -->
+
+    <div class="panel">
+
+        <h2>⌨️ Input</h2>
+
+        <textarea
+            id="input"
+            rows="4"
+            placeholder="TYPE ENGLISH HERE..."
+        ></textarea>
+
+        <div
+            class="keyboard"
+            id="keyboard"
+        ></div>
+
+        <button onclick="encrypt()">
+            ENCRYPT
+        </button>
+
+        <button onclick="decrypt()">
+            DECRYPT
+        </button>
+
+    </div>
+
+
+    <!-- =========================
+         OUTPUT
+    ========================== -->
+
+    <div class="panel">
+
+        <h2>📤 Output</h2>
+
+        <div id="output"></div>
+
+        <button onclick="copyOutput()">
+            COPY
+        </button>
+
+    </div>
+
+
+    <!-- =========================
+         CHAT
+    ========================== -->
+
+    <div class="panel">
+
+        <h2>📡 CHAT</h2>
+
+        <input
+            id="sender"
+            type="text"
+            maxlength="30"
+            placeholder="NAME"
+        >
+
+        <button onclick="sendMessage()">
+            SEND ENCRYPTED MESSAGE
+        </button>
+
+        <div
+            id="connectionStatus"
+            class="status"
+        >
+            Connecting...
+        </div>
+
+        <div id="chat"></div>
+
+    </div>
 
 </div>
 
 
 <script>
 
-/* =========================
-   SUPABASE CONFIG
-========================= */
+/* =========================================================
+   SUPABASE
+========================================================= */
 
 const SUPABASE_URL =
     "https://hzhtfqkzrzbjrkovvjbj.supabase.co";
@@ -212,17 +328,193 @@ const SUPABASE_URL =
 const SUPABASE_KEY =
     "sb_publishable_aFh3LXSz3EiPHzsLbWcZAw_ThS-iwdH";
 
-
 const supabaseClient =
-    supabase.createClient(
+    window.supabase.createClient(
         SUPABASE_URL,
         SUPABASE_KEY
     );
 
 
-/* =========================
+/* =========================================================
+   ROOM
+========================================================= */
+
+const params =
+    new URLSearchParams(
+        window.location.search
+    );
+
+let roomId =
+    params.get("room");
+
+if (!roomId) {
+    roomId = "lobby";
+}
+
+roomId =
+    roomId
+        .toUpperCase()
+        .replace(/[^A-Z0-9_-]/g, "")
+        .slice(0, 20);
+
+if (!roomId) {
+    roomId = "lobby";
+}
+
+
+/* =========================================================
+   ROOM UI
+========================================================= */
+
+function updateRoomUI() {
+
+    const roomStatus =
+        document.getElementById(
+            "roomStatus"
+        );
+
+    if (roomId === "lobby") {
+
+        roomStatus.innerHTML = `
+            <div>
+                現在の部屋：
+                <strong>LOBBY</strong>
+            </div>
+        `;
+
+    } else {
+
+        roomStatus.innerHTML = `
+            <div>
+                現在の部屋：
+                <strong>${escapeHtml(roomId)}</strong>
+            </div>
+
+            <div class="room-code">
+                ${escapeHtml(roomId)}
+            </div>
+
+            <div class="hint">
+                このURLを友達に送れば、このルームに入れます。
+            </div>
+        `;
+
+    }
+
+}
+
+
+/* =========================================================
+   CREATE ROOM
+========================================================= */
+
+function generateRoomCode() {
+
+    const chars =
+        "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+    const values =
+        new Uint32Array(6);
+
+    crypto.getRandomValues(values);
+
+    let code = "";
+
+    for (let i = 0; i < values.length; i++) {
+
+        code +=
+            chars[
+                values[i] %
+                chars.length
+            ];
+
+    }
+
+    return code;
+
+}
+
+
+function createRoom() {
+
+    const code =
+        generateRoomCode();
+
+    const url =
+        window.location.origin +
+        window.location.pathname +
+        "?room=" +
+        encodeURIComponent(code);
+
+    window.location.href = url;
+
+}
+
+
+/* =========================================================
+   JOIN ROOM
+========================================================= */
+
+function showJoinBox() {
+
+    document
+        .getElementById("joinBox")
+        .classList.toggle("hidden");
+
+}
+
+
+function joinRoom() {
+
+    const input =
+        document.getElementById(
+            "roomInput"
+        );
+
+    let code =
+        input.value
+            .trim()
+            .toUpperCase();
+
+    code =
+        code
+            .replace(
+                /[^A-Z0-9_-]/g,
+                ""
+            )
+            .slice(0, 20);
+
+    if (!code) {
+
+        alert(
+            "ROOM CODEを入力してください()"
+        );
+
+        return;
+
+    }
+
+    window.location.href =
+        window.location.origin +
+        window.location.pathname +
+        "?room=" +
+        encodeURIComponent(code);
+
+}
+
+
+function goLobby() {
+
+    window.location.href =
+        window.location.origin +
+        window.location.pathname;
+
+}
+
+
+/* =========================================================
    ENIGMA CONFIG
-========================= */
+========================================================= */
 
 const alphabet =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -231,7 +523,7 @@ const alphabet =
 const rotors = {
 
     I:
-        "EKMFLGDQVZNTOWYHXUSPAIBRCJ",
+        "EKMFLGDQVZNTOWYHXUSPAIBRC",
 
     II:
         "AJDKSIRUXBLHWTMCQGZNPYFVOE",
@@ -249,9 +541,9 @@ const reflector =
 let settings;
 
 
-/* =========================
+/* =========================================================
    DAILY KEY
-========================= */
+========================================================= */
 
 function getJapanDate() {
 
@@ -263,7 +555,9 @@ function getJapanDate() {
             month: "2-digit",
             day: "2-digit"
         }
-    ).format(new Date());
+    ).format(
+        new Date()
+    );
 
 }
 
@@ -272,14 +566,14 @@ function seededRandom(seed) {
 
     let h = 2166136261;
 
-
     for (
         let i = 0;
         i < seed.length;
         i++
     ) {
 
-        h ^= seed.charCodeAt(i);
+        h ^=
+            seed.charCodeAt(i);
 
         h =
             Math.imul(
@@ -289,13 +583,11 @@ function seededRandom(seed) {
 
     }
 
-
     return function () {
 
         h += 0x6D2B79F5;
 
         let t = h;
-
 
         t =
             Math.imul(
@@ -303,14 +595,12 @@ function seededRandom(seed) {
                 t | 1
             );
 
-
         t ^=
             t +
             Math.imul(
                 t ^ (t >>> 7),
                 t | 61
             );
-
 
         return (
             (
@@ -329,13 +619,11 @@ function generateDailyKey() {
     const date =
         getJapanDate();
 
-
     const random =
         seededRandom(
             "ENIGMA-CHAT-" +
             date
         );
-
 
     const rotorNames = [
         "I",
@@ -343,11 +631,9 @@ function generateDailyKey() {
         "III"
     ];
 
-
     const order = [
         ...rotorNames
     ];
-
 
     for (
         let i = order.length - 1;
@@ -361,7 +647,6 @@ function generateDailyKey() {
                 (i + 1)
             );
 
-
         [
             order[i],
             order[j]
@@ -371,7 +656,6 @@ function generateDailyKey() {
         ];
 
     }
-
 
     const positions = [
 
@@ -395,7 +679,6 @@ function generateDailyKey() {
 
     ];
 
-
     settings = {
 
         rotorOrder: order,
@@ -406,15 +689,14 @@ function generateDailyKey() {
 
     };
 
-
     showKey();
 
 }
 
 
-/* =========================
+/* =========================================================
    KEY DISPLAY
-========================= */
+========================================================= */
 
 function showKey() {
 
@@ -431,9 +713,17 @@ function showKey() {
             </tr>
 
             <tr>
-                <td>${settings.rotorOrder[0]}</td>
-                <td>${settings.rotorOrder[1]}</td>
-                <td>${settings.rotorOrder[2]}</td>
+                <td>
+                    ${settings.rotorOrder[0]}
+                </td>
+
+                <td>
+                    ${settings.rotorOrder[1]}
+                </td>
+
+                <td>
+                    ${settings.rotorOrder[2]}
+                </td>
             </tr>
 
             <tr>
@@ -467,9 +757,9 @@ function showKey() {
 }
 
 
-/* =========================
-   ROTOR FORWARD
-========================= */
+/* =========================================================
+   ROTOR
+========================================================= */
 
 function rotorForward(
     letter,
@@ -480,20 +770,16 @@ function rotorForward(
     const rotor =
         rotors[rotorName];
 
-
     let index =
         alphabet.indexOf(letter);
 
-
     index =
         (index + position) % 26;
-
 
     index =
         alphabet.indexOf(
             rotor[index]
         );
-
 
     index =
         (
@@ -502,15 +788,10 @@ function rotorForward(
             26
         ) % 26;
 
-
     return alphabet[index];
 
 }
 
-
-/* =========================
-   ROTOR BACKWARD
-========================= */
 
 function rotorBackward(
     letter,
@@ -521,20 +802,16 @@ function rotorBackward(
     const rotor =
         rotors[rotorName];
 
-
     let index =
         alphabet.indexOf(letter);
 
-
     index =
         (index + position) % 26;
-
 
     index =
         rotor.indexOf(
             alphabet[index]
         );
-
 
     index =
         (
@@ -543,15 +820,14 @@ function rotorBackward(
             26
         ) % 26;
 
-
     return alphabet[index];
 
 }
 
 
-/* =========================
+/* =========================================================
    PROCESS CHARACTER
-========================= */
+========================================================= */
 
 function processCharacter(
     letter,
@@ -559,7 +835,6 @@ function processCharacter(
 ) {
 
     state[0]++;
-
 
     if (
         state[0] >= 26
@@ -569,7 +844,6 @@ function processCharacter(
 
         state[1]++;
 
-
         if (
             state[1] >= 26
         ) {
@@ -577,7 +851,6 @@ function processCharacter(
             state[1] = 0;
 
             state[2]++;
-
 
             if (
                 state[2] >= 26
@@ -591,9 +864,7 @@ function processCharacter(
 
     }
 
-
     let x = letter;
-
 
     x =
         rotorForward(
@@ -602,7 +873,6 @@ function processCharacter(
             state[0]
         );
 
-
     x =
         rotorForward(
             x,
@@ -610,28 +880,24 @@ function processCharacter(
             state[1]
         );
 
-
     x =
         rotorForward(
             x,
             settings.rotorOrder[2],
             state[2]
         );
-
 
     x =
         reflector[
             alphabet.indexOf(x)
         ];
 
-
     x =
         rotorBackward(
             x,
             settings.rotorOrder[2],
             state[2]
         );
-
 
     x =
         rotorBackward(
@@ -640,7 +906,6 @@ function processCharacter(
             state[1]
         );
 
-
     x =
         rotorBackward(
             x,
@@ -648,27 +913,24 @@ function processCharacter(
             state[0]
         );
 
-
     return x;
 
 }
 
 
-/* =========================
+/* =========================================================
    TRANSFORM
-========================= */
+========================================================= */
 
 function transform(text) {
 
     let result = "";
-
 
     let state =
         settings.positions.map(
             x =>
                 alphabet.indexOf(x)
         );
-
 
     for (
         const char of text.toUpperCase()
@@ -684,7 +946,6 @@ function transform(text) {
 
         }
 
-
         result +=
             processCharacter(
                 char,
@@ -693,15 +954,14 @@ function transform(text) {
 
     }
 
-
     return result;
 
 }
 
 
-/* =========================
+/* =========================================================
    ENCRYPT
-========================= */
+========================================================= */
 
 function encrypt() {
 
@@ -710,7 +970,6 @@ function encrypt() {
             "input"
         ).value;
 
-
     document.getElementById(
         "output"
     ).textContent =
@@ -719,9 +978,9 @@ function encrypt() {
 }
 
 
-/* =========================
+/* =========================================================
    DECRYPT
-========================= */
+========================================================= */
 
 function decrypt() {
 
@@ -730,7 +989,6 @@ function decrypt() {
             "input"
         ).value;
 
-
     document.getElementById(
         "output"
     ).textContent =
@@ -739,15 +997,14 @@ function decrypt() {
 }
 
 
-/* =========================
+/* =========================================================
    KEYBOARD
-========================= */
+========================================================= */
 
 const keyboard =
     document.getElementById(
         "keyboard"
     );
-
 
 for (
     const letter of alphabet
@@ -758,18 +1015,14 @@ for (
             "div"
         );
 
-
     key.className =
         "key";
-
 
     key.textContent =
         letter;
 
-
     key.dataset.key =
         letter;
-
 
     key.onclick = () => {
 
@@ -778,14 +1031,11 @@ for (
                 "input"
             );
 
-
         input.value += letter;
-
 
         flashKey(letter);
 
     };
-
 
     keyboard.appendChild(
         key
@@ -801,16 +1051,13 @@ function flashKey(letter) {
             `.key[data-key="${letter}"]`
         );
 
-
     if (!key) {
         return;
     }
 
-
     key.classList.add(
         "active"
     );
-
 
     setTimeout(() => {
 
@@ -823,9 +1070,9 @@ function flashKey(letter) {
 }
 
 
-/* =========================
+/* =========================================================
    COPY
-========================= */
+========================================================= */
 
 async function copyOutput() {
 
@@ -833,7 +1080,6 @@ async function copyOutput() {
         document.getElementById(
             "output"
         ).textContent;
-
 
     if (!text) {
 
@@ -845,14 +1091,14 @@ async function copyOutput() {
 
     }
 
-
     try {
 
         await navigator.clipboard
             .writeText(text);
 
-
-        alert("COPIED!");
+        alert(
+            "COPIED!"
+        );
 
     } catch (error) {
 
@@ -865,61 +1111,9 @@ async function copyOutput() {
 }
 
 
-/* =========================
-   CHAT DISPLAY
-========================= */
-
-function addChatMessage(
-    sender,
-    message,
-    time
-) {
-
-    const chat =
-        document.getElementById(
-            "chat"
-        );
-
-
-    const div =
-        document.createElement(
-            "div"
-        );
-
-
-    div.className =
-        "message";
-
-
-    div.innerHTML = `
-
-        <div class="sender">
-            ${escapeHtml(sender)}
-        </div>
-
-        <div class="encrypted">
-            ${escapeHtml(message)}
-        </div>
-
-        <div class="status">
-            ${time}
-        </div>
-
-    `;
-
-
-    chat.appendChild(div);
-
-
-    chat.scrollTop =
-        chat.scrollHeight;
-
-}
-
-
-/* =========================
-   HTML ESCAPE
-========================= */
+/* =========================================================
+   CHAT
+========================================================= */
 
 function escapeHtml(text) {
 
@@ -933,9 +1127,54 @@ function escapeHtml(text) {
 }
 
 
-/* =========================
-   SEND MESSAGE
-========================= */
+function addChatMessage(
+    sender,
+    message,
+    time
+) {
+
+    const chat =
+        document.getElementById(
+            "chat"
+        );
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.className =
+        "message";
+
+    div.innerHTML = `
+
+        <div class="sender">
+            ${escapeHtml(sender)}
+        </div>
+
+        <div class="encrypted">
+            ${escapeHtml(message)}
+        </div>
+
+        <div class="time">
+            ${escapeHtml(time)}
+        </div>
+
+    `;
+
+    chat.appendChild(
+        div
+    );
+
+    chat.scrollTop =
+        chat.scrollHeight;
+
+}
+
+
+/* =========================================================
+   SEND
+========================================================= */
 
 async function sendMessage() {
 
@@ -945,12 +1184,10 @@ async function sendMessage() {
         ).value.trim() ||
         "UNKNOWN";
 
-
     const message =
         document.getElementById(
             "output"
         ).textContent;
-
 
     if (!message) {
 
@@ -962,13 +1199,12 @@ async function sendMessage() {
 
     }
 
-
     const { error } =
         await supabaseClient
             .from("messages")
             .insert({
 
-                room: "main",
+                room: roomId,
 
                 sender: sender,
 
@@ -976,27 +1212,22 @@ async function sendMessage() {
 
             });
 
-
     if (error) {
 
         console.error(error);
-
 
         alert(
             "送信失敗:\n" +
             error.message
         );
 
-
         return;
 
     }
 
-
     document.getElementById(
         "input"
     ).value = "";
-
 
     document.getElementById(
         "output"
@@ -1005,9 +1236,13 @@ async function sendMessage() {
 }
 
 
-/* =========================
-   LOAD OLD MESSAGES
-========================= */
+/* =========================================================
+   LOAD HISTORY
+========================================================= */
+
+const shownMessageIds =
+    new Set();
+
 
 async function loadMessages() {
 
@@ -1018,7 +1253,7 @@ async function loadMessages() {
         await supabaseClient
             .from("messages")
             .select("*")
-            .eq("room", "main")
+            .eq("room", roomId)
             .order(
                 "created_at",
                 {
@@ -1027,35 +1262,38 @@ async function loadMessages() {
             )
             .limit(100);
 
-
     if (error) {
 
         console.error(error);
+
+        document.getElementById(
+            "chat"
+        ).textContent =
+            "履歴取得失敗: " +
+            error.message;
 
         return;
 
     }
 
-
     document.getElementById(
         "chat"
     ).innerHTML = "";
-
 
     for (
         const message of data
     ) {
 
+        shownMessageIds.add(
+            message.id
+        );
+
         addChatMessage(
-
             message.sender,
-
             message.message,
-
             new Date(
                 message.created_at
             ).toLocaleTimeString()
-
         );
 
     }
@@ -1063,52 +1301,59 @@ async function loadMessages() {
 }
 
 
-/* =========================
+/* =========================================================
    REALTIME
-========================= */
+========================================================= */
 
 const chatChannel =
     supabaseClient
         .channel(
-            "enigma-chat"
+            "enigma-chat-" +
+            roomId
         )
         .on(
-
             "postgres_changes",
-
             {
-
                 event: "INSERT",
-
                 schema: "public",
-
                 table: "messages",
-
                 filter:
-                    "room=eq.main"
-
+                    "room=eq." +
+                    roomId
             },
-
             payload => {
 
                 const data =
                     payload.new;
 
+                /*
+                    履歴読み込みと同時に届いた場合の
+                    二重表示防止
+                */
+
+                if (
+                    shownMessageIds.has(
+                        data.id
+                    )
+                ) {
+
+                    return;
+
+                }
+
+                shownMessageIds.add(
+                    data.id
+                );
 
                 addChatMessage(
-
                     data.sender,
-
                     data.message,
-
                     new Date(
                         data.created_at
                     ).toLocaleTimeString()
-
                 );
 
             }
-
         )
         .subscribe(
             status => {
@@ -1118,13 +1363,13 @@ const chatChannel =
                         "connectionStatus"
                     );
 
-
                 if (
                     status === "SUBSCRIBED"
                 ) {
 
                     element.textContent =
-                        "● ONLINE";
+                        "● ONLINE / ROOM: " +
+                        roomId;
 
                     element.className =
                         "status online";
@@ -1144,9 +1389,9 @@ const chatChannel =
         );
 
 
-/* =========================
-   DAILY KEY AUTO UPDATE
-========================= */
+/* =========================================================
+   DAILY KEY UPDATE
+========================================================= */
 
 let currentDate =
     getJapanDate();
@@ -1157,7 +1402,6 @@ setInterval(() => {
     const newDate =
         getJapanDate();
 
-
     if (
         newDate !== currentDate
     ) {
@@ -1165,19 +1409,15 @@ setInterval(() => {
         currentDate =
             newDate;
 
-
         generateDailyKey();
-
 
         document.getElementById(
             "output"
         ).textContent = "";
 
-
         document.getElementById(
             "input"
         ).value = "";
-
 
         alert(
             "新しい日の鍵に更新されました！"
@@ -1188,9 +1428,11 @@ setInterval(() => {
 }, 30000);
 
 
-/* =========================
+/* =========================================================
    START
-========================= */
+========================================================= */
+
+updateRoomUI();
 
 generateDailyKey();
 
@@ -1200,4 +1442,3 @@ loadMessages();
 
 </body>
 </html>
-```
