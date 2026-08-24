@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ENIGMA CHAT</title>
+
+<style>
+    body {
+        background: #111;
+        color: #eee;
+        font-family: monospace;
+        margin: 0;
+        padding: 20px;
+    }
+
+    .app {
+        max-width: 900px;
+        margin: auto;
+    }
+
+    h1 {
+        color: #7cff7c;
+    }
+
+    .panel {
+        border: 1px solid #555;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        background: #181818;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    td, th {
+        border: 1px solid #555;
+        padding: 6px;
+        text-align: center;
+    }
+
+    textarea {
+        width: 100%;
+        box-sizing: border-box;
+        background: #080808;
+        color: #7cff7c;
+        border: 1px solid #555;
+        padding: 10px;
+        font-family: monospace;
+        resize: vertical;
+    }
+
+    button {
+        background: #222;
+        color: white;
+        border: 1px solid #777;
+        padding: 10px 15px;
+        margin: 5px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #444;
+    }
+
+    .keyboard {
+        display: grid;
+        grid-template-columns: repeat(13, 1fr);
+        gap: 5px;
+        margin-top: 10px;
+    }
+
+    .key {
+        padding: 12px 3px;
+        text-align: center;
+        border: 1px solid #555;
+        background: #222;
+        border-radius: 5px;
+        user-select: none;
+    }
+
+    .key.active {
+        background: #7cff7c;
+        color: #000;
+    }
+
+    #output {
+        white-space: pre-wrap;
+        word-break: break-all;
+        color: #7cff7c;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<h1>🔐 ENIGMA CHAT</h1>
+
+<div class="panel">
+    <h2>Today's Key</h2>
+    <div id="keyTable"></div>
+</div>
+
+<div class="panel">
+    <h2>Input</h2>
+
+    <textarea id="input"
+        rows="4"
+        placeholder="TYPE ENGLISH HERE..."></textarea>
+
+    <div class="keyboard" id="keyboard"></div>
+
+    <button onclick="encrypt()">ENCRYPT</button>
+    <button onclick="decrypt()">DECRYPT</button>
+</div>
+
+<div class="panel">
+    <h2>Output</h2>
+    <div id="output"></div>
+</div>
+
+<div class="panel">
+    <button onclick="copyOutput()">COPY</button>
+    <button onclick="generateNewKey()">GENERATE NEW KEY</button>
+</div>
+
+</div>
+
+<script>
+
+/* =========================
+   ENIGMA CONFIG
+========================= */
+
+const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+const rotors = {
+    I:   "EKMFLGDQVZNTOWYHXUSPAIBRCJ",
+    II:  "AJDKSIRUXBLHWTMCQGZNPYFVOE",
+    III: "BDFHJLCPRTXVZNYEIWGAKMUSQO"
+};
+
+const reflector = "YRUHQSLDPXNGOKMIEBFZCWVJAT";
+
+let settings;
+
+/* =========================
+   DAILY KEY
+========================= */
+
+function randomLetter() {
+    return alphabet[Math.floor(Math.random() * 26)];
+}
+
+function randomRotor() {
+    const names = ["I", "II", "III"];
+
+    return names[Math.floor(Math.random() * names.length)];
+}
+
+function generateKey() {
+
+    let order = [
+        randomRotor(),
+        randomRotor(),
+        randomRotor()
+    ];
+
+    // 同じローターが重複しないようにする
+    order = [...new Set(order)];
+
+    while (order.length < 3) {
+        const r = randomRotor();
+
+        if (!order.includes(r)) {
+            order.push(r);
+        }
+    }
+
+    settings = {
+        rotorOrder: order,
+        positions: [
+            randomLetter(),
+            randomLetter(),
+            randomLetter()
+        ]
+    };
+
+    saveKey();
+    showKey();
+}
+
+function saveKey() {
+    localStorage.setItem(
+        "enigmaKey",
+        JSON.stringify(settings)
+    );
+}
+
+function loadKey() {
+
+    const saved = localStorage.getItem("enigmaKey");
+
+    if (saved) {
+        settings = JSON.parse(saved);
+    } else {
+        generateKey();
+    }
+
+    showKey();
+}
+
+/* =========================
+   KEY DISPLAY
+========================= */
+
+function showKey() {
+
+    document.getElementById("keyTable").innerHTML = `
+        <table>
+            <tr>
+                <th>Rotor I</th>
+                <th>Rotor II</th>
+                <th>Rotor III</th>
+            </tr>
+
+            <tr>
+                <td>${settings.rotorOrder[0]}</td>
+                <td>${settings.rotorOrder[1]}</td>
+                <td>${settings.rotorOrder[2]}</td>
+            </tr>
+
+            <tr>
+                <th colspan="3">Initial Position</th>
+            </tr>
+
+            <tr>
+                <td colspan="3">
+                    ${settings.positions.join(" - ")}
+                </td>
+            </tr>
+        </table>
+    `;
+}
+
+/* =========================
+   ROTOR
+========================= */
+
+function rotorForward(letter, rotorName, position) {
+
+    const rotor = rotors[rotorName];
+
+    let index = alphabet.indexOf(letter);
+
+    index = (index + position) % 26;
+
+    index = alphabet.indexOf(rotor[index]);
+
+    index = (index - position + 26) % 26;
+
+    return alphabet[index];
+}
+
+function rotorBackward(letter, rotorName, position) {
+
+    const rotor = rotors[rotorName];
+
+    let index = alphabet.indexOf(letter);
+
+    index = (index + position) % 26;
+
+    index = rotor.indexOf(alphabet[index]);
+
+    index = (index - position + 26) % 26;
+
+    return alphabet[index];
+}
+
+/* =========================
+   ONE CHARACTER
+========================= */
+
+function processCharacter(letter, state) {
+
+    // ローターを進める
+    state[0]++;
+
+    if (state[0] >= 26) {
+        state[0] = 0;
+        state[1]++;
+
+        if (state[1] >= 26) {
+            state[1] = 0;
+            state[2]++;
+
+            if (state[2] >= 26) {
+                state[2] = 0;
+            }
+        }
+    }
+
+    let x = letter;
+
+    // Forward
+    x = rotorForward(
+        x,
+        settings.rotorOrder[0],
+        state[0]
+    );
+
+    x = rotorForward(
+        x,
+        settings.rotorOrder[1],
+        state[1]
+    );
+
+    x = rotorForward(
+        x,
+        settings.rotorOrder[2],
+        state[2]
+    );
+
+    // Reflector
+    x = reflector[alphabet.indexOf(x)];
+
+    // Backward
+    x = rotorBackward(
+        x,
+        settings.rotorOrder[2],
+        state[2]
+    );
+
+    x = rotorBackward(
+        x,
+        settings.rotorOrder[1],
+        state[1]
+    );
+
+    x = rotorBackward(
+        x,
+        settings.rotorOrder[0],
+        state[0]
+    );
+
+    return x;
+}
+
+/* =========================
+   ENCRYPT / DECRYPT
+========================= */
+
+function transform(text) {
+
+    let result = "";
+
+    let state = settings.positions.map(
+        x => alphabet.indexOf(x)
+    );
+
+    for (const char of text.toUpperCase()) {
+
+        if (!alphabet.includes(char)) {
+            result += char;
+            continue;
+        }
+
+        result += processCharacter(
+            char,
+            state
+        );
+    }
+
+    return result;
+}
+
+function encrypt() {
+
+    const text =
+        document.getElementById("input").value;
+
+    document.getElementById("output").textContent =
+        transform(text);
+}
+
+function decrypt() {
+
+    // エニグマは同じ設定・同じ開始位置で
+    // 同じ処理を逆向きに通すことで復号できる
+    const text =
+        document.getElementById("input").value;
+
+    document.getElementById("output").textContent =
+        transform(text);
+}
+
+/* =========================
+   KEYBOARD
+========================= */
+
+const keyboard =
+    document.getElementById("keyboard");
+
+for (const letter of alphabet) {
+
+    const key =
+        document.createElement("div");
+
+    key.className = "key";
+    key.textContent = letter;
+    key.dataset.key = letter;
+
+    key.onclick = () => {
+
+        const input =
+            document.getElementById("input");
+
+        input.value += letter;
+
+        flashKey(letter);
+    };
+
+    keyboard.appendChild(key);
+}
+
+function flashKey(letter) {
+
+    const key =
+        document.querySelector(
+            `.key[data-key="${letter}"]`
+        );
+
+    if (!key) return;
+
+    key.classList.add("active");
+
+    setTimeout(() => {
+        key.classList.remove("active");
+    }, 150);
+}
+
+/* =========================
+   COPY
+========================= */
+
+async function copyOutput() {
+
+    const text =
+        document.getElementById("output").textContent;
+
+    await navigator.clipboard.writeText(text);
+}
+
+/* =========================
+   NEW KEY
+========================= */
+
+function generateNewKey() {
+
+    generateKey();
+
+    document.getElementById("output")
+        .textContent = "";
+
+    alert("NEW KEY GENERATED");
+}
+
+/* =========================
+   START
+========================= */
+
+loadKey();
+
+</script>
+
+</body>
+</html>
