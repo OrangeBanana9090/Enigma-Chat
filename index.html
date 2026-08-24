@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>ENIGMA CHAT</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+    body {
+        background: #111;
+        color: #eee;
+        font-family: monospace;
+        margin: 0;
+        padding: 20px;
+    }
+
+    .app {
+        max-width: 900px;
+        margin: auto;
+    }
+
+    h1 {
+        color: #7cff7c;
+    }
+
+    .panel {
+        border: 1px solid #555;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        background: #181818;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    td,
+    th {
+        border: 1px solid #555;
+        padding: 6px;
+        text-align: center;
+    }
+
+    textarea,
+    input {
+        width: 100%;
+        box-sizing: border-box;
+        background: #080808;
+        color: #7cff7c;
+        border: 1px solid #555;
+        padding: 10px;
+        font-family: monospace;
+        border-radius: 4px;
+    }
+
+    textarea {
+        resize: vertical;
+    }
+
+    button {
+        background: #222;
+        color: white;
+        border: 1px solid #777;
+        padding: 10px 15px;
+        margin: 5px;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+    button:hover {
+        background: #444;
+    }
+
+    .keyboard {
+        display: grid;
+        grid-template-columns: repeat(13, 1fr);
+        gap: 5px;
+        margin-top: 10px;
+    }
+
+    .key {
+        padding: 12px 3px;
+        text-align: center;
+        border: 1px solid #555;
+        background: #222;
+        border-radius: 5px;
+        user-select: none;
+        cursor: pointer;
+    }
+
+    .key.active {
+        background: #7cff7c;
+        color: #000;
+    }
+
+    #output {
+        white-space: pre-wrap;
+        word-break: break-all;
+        color: #7cff7c;
+    }
+
+    #chat {
+        margin-top: 10px;
+        max-height: 450px;
+        overflow-y: auto;
+    }
+
+    .message {
+        border: 1px solid #444;
+        padding: 10px;
+        margin: 6px 0;
+        border-radius: 5px;
+        background: #101010;
+    }
+
+    .message .sender {
+        color: #7cff7c;
+        font-weight: bold;
+    }
+
+    .message .encrypted {
+        color: #ddd;
+        word-break: break-all;
+        margin-top: 5px;
+    }
+
+    .message .time {
+        color: #777;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .status {
+        color: #aaa;
+        margin-top: 8px;
+    }
+
+    .online {
+        color: #7cff7c;
+    }
+
+    .offline {
+        color: #ff7777;
+    }
+
+    .room-code {
+        font-size: 24px;
+        color: #7cff7c;
+        letter-spacing: 4px;
+        text-align: center;
+        padding: 15px;
+        border: 1px solid #555;
+        background: #080808;
+        margin: 10px 0;
+        border-radius: 5px;
+    }
+
+    .hint {
+        color: #888;
+        font-size: 13px;
+    }
+
+    .hidden {
+        display: none;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <h1>🔐 ENIGMA CHAT</h1>
+
+    <!-- =========================
+         ROOM MENU
+    ========================== -->
+
+    <div class="panel">
+
+        <h2>🌐 ROOM</h2>
+
+        <div id="roomStatus">
+            Loading...
+        </div>
+
+        <button onclick="createRoom()">
+            CREATE ROOM
+        </button>
+
+        <button onclick="showJoinBox()">
+            JOIN ROOM
+        </button>
+
+        <button onclick="goLobby()">
+            LOBBY
+        </button>
+
+        <div id="joinBox" class="hidden">
+
+            <input
+                id="roomInput"
+                type="text"
+                maxlength="20"
+                placeholder="ROOM CODE"
+            >
+
+            <button onclick="joinRoom()">
+                JOIN
+            </button>
+
+        </div>
+
+        <div class="hint">
+            ルームに入らなければ全員共通のロビーです。
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         TODAY'S KEY
+    ========================== -->
+
+    <div class="panel">
+
+        <h2>🔑 Today's Key</h2>
+
+        <div id="keyTable"></div>
+
+    </div>
+
+
+    <!-- =========================
+         INPUT
+    ========================== -->
+
+    <div class="panel">
+
+        <h2>⌨️ Input</h2>
+
+        <textarea
+            id="input"
+            rows="4"
+            placeholder="TYPE ENGLISH HERE..."
+        ></textarea>
+
+        <div
+            class="keyboard"
+            id="keyboard"
+        ></div>
+
+        <button onclick="encrypt()">
+            ENCRYPT
+        </button>
+
+        <button onclick="decrypt()">
+            DECRYPT
+        </button>
+
+    </div>
+
+
+    <!-- =========================
+         OUTPUT
+    ========================== -->
+
+    <div class="panel">
+
+        <h2>📤 Output</h2>
+
+        <div id="output"></div>
+
+        <button onclick="copyOutput()">
+            COPY
+        </button>
+
+    </div>
+
+
+    <!-- =========================
+         CHAT
+    ========================== -->
+
+    <div class="panel">
+
+        <h2>📡 CHAT</h2>
+
+        <input
+            id="sender"
+            type="text"
+            maxlength="30"
+            placeholder="NAME"
+        >
+
+        <button onclick="sendMessage()">
+            SEND ENCRYPTED MESSAGE
+        </button>
+
+        <div
+            id="connectionStatus"
+            class="status"
+        >
+            Connecting...
+        </div>
+
+        <div id="chat"></div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   SUPABASE
+========================================================= */
+
+const SUPABASE_URL =
+    "https://hzhtfqkzrzbjrkovvjbj.supabase.co";
+
+const SUPABASE_KEY =
+    "sb_publishable_aFh3LXSz3EiPHzsLbWcZAw_ThS-iwdH";
+
+const supabaseClient =
+    window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_KEY
+    );
+
+
+/* =========================================================
+   ROOM
+========================================================= */
+
+const params =
+    new URLSearchParams(
+        window.location.search
+    );
+
+let roomId =
+    params.get("room");
+
+if (!roomId) {
+    roomId = "lobby";
+}
+
+roomId =
+    roomId
+        .toUpperCase()
+        .replace(/[^A-Z0-9_-]/g, "")
+        .slice(0, 20);
+
+if (!roomId) {
+    roomId = "lobby";
+}
+
+
+/* =========================================================
+   ROOM UI
+========================================================= */
+
+function updateRoomUI() {
+
+    const roomStatus =
+        document.getElementById(
+            "roomStatus"
+        );
+
+    if (roomId === "lobby") {
+
+        roomStatus.innerHTML = `
+            <div>
+                現在の部屋：
+                <strong>LOBBY</strong>
+            </div>
+        `;
+
+    } else {
+
+        roomStatus.innerHTML = `
+            <div>
+                現在の部屋：
+                <strong>${escapeHtml(roomId)}</strong>
+            </div>
+
+            <div class="room-code">
+                ${escapeHtml(roomId)}
+            </div>
+
+            <div class="hint">
+                このURLを友達に送れば、このルームに入れます。
+            </div>
+        `;
+
+    }
+
+}
+
+
+/* =========================================================
+   CREATE ROOM
+========================================================= */
+
+function generateRoomCode() {
+
+    const chars =
+        "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+    const values =
+        new Uint32Array(6);
+
+    crypto.getRandomValues(values);
+
+    let code = "";
+
+    for (let i = 0; i < values.length; i++) {
+
+        code +=
+            chars[
+                values[i] %
+                chars.length
+            ];
+
+    }
+
+    return code;
+
+}
+
+
+function createRoom() {
+
+    const code =
+        generateRoomCode();
+
+    const url =
+        window.location.origin +
+        window.location.pathname +
+        "?room=" +
+        encodeURIComponent(code);
+
+    window.location.href = url;
+
+}
+
+
+/* =========================================================
+   JOIN ROOM
+========================================================= */
+
+function showJoinBox() {
+
+    document
+        .getElementById("joinBox")
+        .classList.toggle("hidden");
+
+}
+
+
+function joinRoom() {
+
+    const input =
+        document.getElementById(
+            "roomInput"
+        );
+
+    let code =
+        input.value
+            .trim()
+            .toUpperCase();
+
+    code =
+        code
+            .replace(
+                /[^A-Z0-9_-]/g,
+                ""
+            )
+            .slice(0, 20);
+
+    if (!code) {
+
+        alert(
+            "ROOM CODEを入力してください()"
+        );
+
+        return;
+
+    }
+
+    window.location.href =
+        window.location.origin +
+        window.location.pathname +
+        "?room=" +
+        encodeURIComponent(code);
+
+}
+
+
+function goLobby() {
+
+    window.location.href =
+        window.location.origin +
+        window.location.pathname;
+
+}
+
+
+/* =========================================================
+   ENIGMA CONFIG
+========================================================= */
+
+const alphabet =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+
+const rotors = {
+
+    I:
+        "EKMFLGDQVZNTOWYHXUSPAIBRC",
+
+    II:
+        "AJDKSIRUXBLHWTMCQGZNPYFVOE",
+
+    III:
+        "BDFHJLCPRTXVZNYEIWGAKMUSQO"
+
+};
+
+
+const reflector =
+    "YRUHQSLDPXNGOKMIEBFZCWVJAT";
+
+
+let settings;
+
+
+/* =========================================================
+   DAILY KEY
+========================================================= */
+
+function getJapanDate() {
+
+    return new Intl.DateTimeFormat(
+        "en-CA",
+        {
+            timeZone: "Asia/Tokyo",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        }
+    ).format(
+        new Date()
+    );
+
+}
+
+
+function seededRandom(seed) {
+
+    let h = 2166136261;
+
+    for (
+        let i = 0;
+        i < seed.length;
+        i++
+    ) {
+
+        h ^=
+            seed.charCodeAt(i);
+
+        h =
+            Math.imul(
+                h,
+                16777619
+            );
+
+    }
+
+    return function () {
+
+        h += 0x6D2B79F5;
+
+        let t = h;
+
+        t =
+            Math.imul(
+                t ^ (t >>> 15),
+                t | 1
+            );
+
+        t ^=
+            t +
+            Math.imul(
+                t ^ (t >>> 7),
+                t | 61
+            );
+
+        return (
+            (
+                t ^
+                (t >>> 14)
+            ) >>> 0
+        ) / 4294967296;
+
+    };
+
+}
+
+
+function generateDailyKey() {
+
+    const date =
+        getJapanDate();
+
+    const random =
+        seededRandom(
+            "ENIGMA-CHAT-" +
+            date
+        );
+
+    const rotorNames = [
+        "I",
+        "II",
+        "III"
+    ];
+
+    const order = [
+        ...rotorNames
+    ];
+
+    for (
+        let i = order.length - 1;
+        i > 0;
+        i--
+    ) {
+
+        const j =
+            Math.floor(
+                random() *
+                (i + 1)
+            );
+
+        [
+            order[i],
+            order[j]
+        ] = [
+            order[j],
+            order[i]
+        ];
+
+    }
+
+    const positions = [
+
+        alphabet[
+            Math.floor(
+                random() * 26
+            )
+        ],
+
+        alphabet[
+            Math.floor(
+                random() * 26
+            )
+        ],
+
+        alphabet[
+            Math.floor(
+                random() * 26
+            )
+        ]
+
+    ];
+
+    settings = {
+
+        rotorOrder: order,
+
+        positions: positions,
+
+        date: date
+
+    };
+
+    showKey();
+
+}
+
+
+/* =========================================================
+   KEY DISPLAY
+========================================================= */
+
+function showKey() {
+
+    document.getElementById(
+        "keyTable"
+    ).innerHTML = `
+
+        <table>
+
+            <tr>
+                <th>Rotor I</th>
+                <th>Rotor II</th>
+                <th>Rotor III</th>
+            </tr>
+
+            <tr>
+                <td>
+                    ${settings.rotorOrder[0]}
+                </td>
+
+                <td>
+                    ${settings.rotorOrder[1]}
+                </td>
+
+                <td>
+                    ${settings.rotorOrder[2]}
+                </td>
+            </tr>
+
+            <tr>
+                <th colspan="3">
+                    Initial Position
+                </th>
+            </tr>
+
+            <tr>
+                <td colspan="3">
+                    ${settings.positions.join(" - ")}
+                </td>
+            </tr>
+
+            <tr>
+                <th colspan="3">
+                    Date
+                </th>
+            </tr>
+
+            <tr>
+                <td colspan="3">
+                    ${settings.date}
+                </td>
+            </tr>
+
+        </table>
+
+    `;
+
+}
+
+
+/* =========================================================
+   ROTOR
+========================================================= */
+
+function rotorForward(
+    letter,
+    rotorName,
+    position
+) {
+
+    const rotor =
+        rotors[rotorName];
+
+    let index =
+        alphabet.indexOf(letter);
+
+    index =
+        (index + position) % 26;
+
+    index =
+        alphabet.indexOf(
+            rotor[index]
+        );
+
+    index =
+        (
+            index -
+            position +
+            26
+        ) % 26;
+
+    return alphabet[index];
+
+}
+
+
+function rotorBackward(
+    letter,
+    rotorName,
+    position
+) {
+
+    const rotor =
+        rotors[rotorName];
+
+    let index =
+        alphabet.indexOf(letter);
+
+    index =
+        (index + position) % 26;
+
+    index =
+        rotor.indexOf(
+            alphabet[index]
+        );
+
+    index =
+        (
+            index -
+            position +
+            26
+        ) % 26;
+
+    return alphabet[index];
+
+}
+
+
+/* =========================================================
+   PROCESS CHARACTER
+========================================================= */
+
+function processCharacter(
+    letter,
+    state
+) {
+
+    state[0]++;
+
+    if (
+        state[0] >= 26
+    ) {
+
+        state[0] = 0;
+
+        state[1]++;
+
+        if (
+            state[1] >= 26
+        ) {
+
+            state[1] = 0;
+
+            state[2]++;
+
+            if (
+                state[2] >= 26
+            ) {
+
+                state[2] = 0;
+
+            }
+
+        }
+
+    }
+
+    let x = letter;
+
+    x =
+        rotorForward(
+            x,
+            settings.rotorOrder[0],
+            state[0]
+        );
+
+    x =
+        rotorForward(
+            x,
+            settings.rotorOrder[1],
+            state[1]
+        );
+
+    x =
+        rotorForward(
+            x,
+            settings.rotorOrder[2],
+            state[2]
+        );
+
+    x =
+        reflector[
+            alphabet.indexOf(x)
+        ];
+
+    x =
+        rotorBackward(
+            x,
+            settings.rotorOrder[2],
+            state[2]
+        );
+
+    x =
+        rotorBackward(
+            x,
+            settings.rotorOrder[1],
+            state[1]
+        );
+
+    x =
+        rotorBackward(
+            x,
+            settings.rotorOrder[0],
+            state[0]
+        );
+
+    return x;
+
+}
+
+
+/* =========================================================
+   TRANSFORM
+========================================================= */
+
+function transform(text) {
+
+    let result = "";
+
+    let state =
+        settings.positions.map(
+            x =>
+                alphabet.indexOf(x)
+        );
+
+    for (
+        const char of text.toUpperCase()
+    ) {
+
+        if (
+            !alphabet.includes(char)
+        ) {
+
+            result += char;
+
+            continue;
+
+        }
+
+        result +=
+            processCharacter(
+                char,
+                state
+            );
+
+    }
+
+    return result;
+
+}
+
+
+/* =========================================================
+   ENCRYPT
+========================================================= */
+
+function encrypt() {
+
+    const text =
+        document.getElementById(
+            "input"
+        ).value;
+
+    document.getElementById(
+        "output"
+    ).textContent =
+        transform(text);
+
+}
+
+
+/* =========================================================
+   DECRYPT
+========================================================= */
+
+function decrypt() {
+
+    const text =
+        document.getElementById(
+            "input"
+        ).value;
+
+    document.getElementById(
+        "output"
+    ).textContent =
+        transform(text);
+
+}
+
+
+/* =========================================================
+   KEYBOARD
+========================================================= */
+
+const keyboard =
+    document.getElementById(
+        "keyboard"
+    );
+
+for (
+    const letter of alphabet
+) {
+
+    const key =
+        document.createElement(
+            "div"
+        );
+
+    key.className =
+        "key";
+
+    key.textContent =
+        letter;
+
+    key.dataset.key =
+        letter;
+
+    key.onclick = () => {
+
+        const input =
+            document.getElementById(
+                "input"
+            );
+
+        input.value += letter;
+
+        flashKey(letter);
+
+    };
+
+    keyboard.appendChild(
+        key
+    );
+
+}
+
+
+function flashKey(letter) {
+
+    const key =
+        document.querySelector(
+            `.key[data-key="${letter}"]`
+        );
+
+    if (!key) {
+        return;
+    }
+
+    key.classList.add(
+        "active"
+    );
+
+    setTimeout(() => {
+
+        key.classList.remove(
+            "active"
+        );
+
+    }, 150);
+
+}
+
+
+/* =========================================================
+   COPY
+========================================================= */
+
+async function copyOutput() {
+
+    const text =
+        document.getElementById(
+            "output"
+        ).textContent;
+
+    if (!text) {
+
+        alert(
+            "コピーするものがないぞ()"
+        );
+
+        return;
+
+    }
+
+    try {
+
+        await navigator.clipboard
+            .writeText(text);
+
+        alert(
+            "COPIED!"
+        );
+
+    } catch (error) {
+
+        alert(
+            "コピーに失敗しました"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   CHAT
+========================================================= */
+
+function escapeHtml(text) {
+
+    return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+
+}
+
+
+function addChatMessage(
+    sender,
+    message,
+    time
+) {
+
+    const chat =
+        document.getElementById(
+            "chat"
+        );
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.className =
+        "message";
+
+    div.innerHTML = `
+
+        <div class="sender">
+            ${escapeHtml(sender)}
+        </div>
+
+        <div class="encrypted">
+            ${escapeHtml(message)}
+        </div>
+
+        <div class="time">
+            ${escapeHtml(time)}
+        </div>
+
+    `;
+
+    chat.appendChild(
+        div
+    );
+
+    chat.scrollTop =
+        chat.scrollHeight;
+
+}
+
+
+/* =========================================================
+   SEND
+========================================================= */
+
+async function sendMessage() {
+
+    const sender =
+        document.getElementById(
+            "sender"
+        ).value.trim() ||
+        "UNKNOWN";
+
+    const message =
+        document.getElementById(
+            "output"
+        ).textContent;
+
+    if (!message) {
+
+        alert(
+            "先にENCRYPTしてくれ()"
+        );
+
+        return;
+
+    }
+
+    const { error } =
+        await supabaseClient
+            .from("messages")
+            .insert({
+
+                room: roomId,
+
+                sender: sender,
+
+                message: message
+
+            });
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "送信失敗:\n" +
+            error.message
+        );
+
+        return;
+
+    }
+
+    document.getElementById(
+        "input"
+    ).value = "";
+
+    document.getElementById(
+        "output"
+    ).textContent = "";
+
+}
+
+
+/* =========================================================
+   LOAD HISTORY
+========================================================= */
+
+const shownMessageIds =
+    new Set();
+
+
+async function loadMessages() {
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient
+            .from("messages")
+            .select("*")
+            .eq("room", roomId)
+            .order(
+                "created_at",
+                {
+                    ascending: true
+                }
+            )
+            .limit(100);
+
+    if (error) {
+
+        console.error(error);
+
+        document.getElementById(
+            "chat"
+        ).textContent =
+            "履歴取得失敗: " +
+            error.message;
+
+        return;
+
+    }
+
+    document.getElementById(
+        "chat"
+    ).innerHTML = "";
+
+    for (
+        const message of data
+    ) {
+
+        shownMessageIds.add(
+            message.id
+        );
+
+        addChatMessage(
+            message.sender,
+            message.message,
+            new Date(
+                message.created_at
+            ).toLocaleTimeString()
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   REALTIME
+========================================================= */
+
+const chatChannel =
+    supabaseClient
+        .channel(
+            "enigma-chat-" +
+            roomId
+        )
+        .on(
+            "postgres_changes",
+            {
+                event: "INSERT",
+                schema: "public",
+                table: "messages",
+                filter:
+                    "room=eq." +
+                    roomId
+            },
+            payload => {
+
+                const data =
+                    payload.new;
+
+                /*
+                    履歴読み込みと同時に届いた場合の
+                    二重表示防止
+                */
+
+                if (
+                    shownMessageIds.has(
+                        data.id
+                    )
+                ) {
+
+                    return;
+
+                }
+
+                shownMessageIds.add(
+                    data.id
+                );
+
+                addChatMessage(
+                    data.sender,
+                    data.message,
+                    new Date(
+                        data.created_at
+                    ).toLocaleTimeString()
+                );
+
+            }
+        )
+        .subscribe(
+            status => {
+
+                const element =
+                    document.getElementById(
+                        "connectionStatus"
+                    );
+
+                if (
+                    status === "SUBSCRIBED"
+                ) {
+
+                    element.textContent =
+                        "● ONLINE / ROOM: " +
+                        roomId;
+
+                    element.className =
+                        "status online";
+
+                } else {
+
+                    element.textContent =
+                        "● " +
+                        status;
+
+                    element.className =
+                        "status offline";
+
+                }
+
+            }
+        );
+
+
+/* =========================================================
+   DAILY KEY UPDATE
+========================================================= */
+
+let currentDate =
+    getJapanDate();
+
+
+setInterval(() => {
+
+    const newDate =
+        getJapanDate();
+
+    if (
+        newDate !== currentDate
+    ) {
+
+        currentDate =
+            newDate;
+
+        generateDailyKey();
+
+        document.getElementById(
+            "output"
+        ).textContent = "";
+
+        document.getElementById(
+            "input"
+        ).value = "";
+
+        alert(
+            "新しい日の鍵に更新されました！"
+        );
+
+    }
+
+}, 30000);
+
+
+/* =========================================================
+   START
+========================================================= */
+
+updateRoomUI();
+
+generateDailyKey();
+
+loadMessages();
+
+</script>
+
+</body>
+</html>
